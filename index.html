@@ -25,10 +25,7 @@
     </script>
 
     <!-- Default index-page template name -->
-    <script type="text/x-handlebars" id="index"></script>
-
-    <!-- Routed "search" template name -->
-    <script type="text/x-handlebars" id="search">
+    <script type="text/x-handlebars" id="index">
       {{input valueBinding="searchQuery" placeholder="Search..."}}
       <button {{action "searchAcs"}}>Search</button>
       
@@ -68,36 +65,14 @@
     
     var ACS = Ember.Application.create({});
 
-    ACS.Search = Ember.Object.extend({});
-
-    ACS.Router.map(function () { 
-        this.resource("search");
-    });
-
-    ACS.IndexRoute = Ember.Route.extend({
-        redirect: function () {
-            this.transitionTo("search");
-        }
-    });
-
-    ACS.SearchRoute = Ember.Route.extend({
-        model: function () {
-            return [];
-        },
-        setupController: function(controller, model) {
-            controller.set("persons", model);
-        }
-    });
-
-    ACS.SearchController = Ember.Controller.extend({
+    // IndexController is automatically bound
+    ACS.IndexController = Ember.Controller.extend({
         searchAcs: function () {
             var searchQuery = this.get("searchQuery");
             var persons = [];
 
             if (searchQuery == '') {
-              console.log('no search');
               this.set("persons", []);
-              return;
             } else {
               $.ajax({
                 type:"get",
@@ -132,7 +107,7 @@
                 this.set("persons", persons);
               });
             }
-        }
+        }.observes('searchQuery')
     });
 
     </script>
