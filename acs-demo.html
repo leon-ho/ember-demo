@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ember ACS Search</title>
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { margin: 1em;}
+      .photo_small {
+        width: 48px;
+        height: 48px;
+        background-size: cover; 
+        background-position: center;
+      }
+      table { border: 1px solid #ccc; margin-top: 1em;}
+      th, td {padding: .3em; border-bottom: 1px solid #ccc;}
+    </style>
+  </head>
+  
+  <body>
+    
+    <!-- Default application template name -->
+    <script type="text/x-handlebars" id="application"> 
+      <h1>Ember ACS Search</h1>
+      {{outlet}}
+    </script>
+
+    <!-- Default index-page template name -->
+    <script type="text/x-handlebars" id="index"></script>
+
+    <!-- Routed "search" template name -->
+    <script type="text/x-handlebars" id="search">
+      {{input valueBinding="searchQuery" placeholder="Search..."}}
+      <button {{action "searchAcs"}}>Search</button>
+      
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Department</th>
+          </tr>
+        </thead>
+        {{#each person in persons}}
+            <tr>
+              <td><div style="background-image: url(http://cv.altran.se/media/{{unbound person.image}})" class="photo_small"></div></td>
+              <td>{{person.name}}</td>
+              <td>{{person.title}}</td>
+              <td>{{person.department}}</td>
+            </tr>
+        {{else}}
+            <tr><td colspan="4">
+                {{#if searchQuery}}
+                    No people found for search "{{searchQuery}}".
+                {{else}}
+                    Type above to start searching!
+                {{/if}}
+            </td></tr>
+        {{/each}}
+      </table>
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.0.0/handlebars.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ember.js/1.4.0/ember.prod.js"></script>
+
+    <script>
+    
+    var ACS = Ember.Application.create({});
+
+    ACS.Search = Ember.Object.extend({});
+
+    ACS.Router.map(function () { 
+        this.resource("search");
+    });
+
+    ACS.IndexRoute = Ember.Route.extend({
+        redirect: function () {
+            this.transitionTo("search");
+        }
+    });
+
+    ACS.SearchRoute = Ember.Route.extend({
+        model: function () {
+            return [];
+        },
+        setupController: function(controller, model) {
+            controller.set("persons", model);
+        }
+    });
+
+    ACS.SearchController = Ember.Controller.extend({
+        searchAcs: function () {
+            var searchQuery = this.get("searchQuery");
+            var persons = [];
+
+            if (searchQuery == '') {
+              console.log('no search');
+              this.set("persons", []);
+              return;
+            } else {
+              $.ajax({
+                type:"get",
+                url: 'https://cv.altran.se/solr/collection1/select',
+                dataType: 'jsonp',
+                jsonp: 'json.wrf',
+                context: this,
+                data: {
+                  'q':searchQuery,
+                  'wt':'json',
+                  'rows':10,
+                  'fl': 'rendered',
+                  'facet': 'true',
+                  'facet.field': [
+                    'location_exact', 
+                    'department_exact',
+                    'years_of_experience_exact'
+                    ]
+                },
+                traditional: true
+              }).done(function( data ) {
+                var docs = data.response.docs;
+                var persons = [];
+                if( docs.length>0 ) {
+                  for( var i=0; i<docs.length; i++ ) {
+                    var person = JSON.parse( docs[i].rendered );
+                    person.image = person.image.replace(/(.jpg|.png)/gi,'_scale_110x110.jpg');
+                    persons.push( person );
+                  }
+                }
+                // update the content
+                this.set("persons", persons);
+              });
+            }
+        }
+    });
+
+    </script>
+
+  </body>
+
+</html>
